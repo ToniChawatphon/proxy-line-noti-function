@@ -1,6 +1,7 @@
 LICENSE
 *.md
-*sh
+*.sh
 config
 .git
 assets
+.gitignore

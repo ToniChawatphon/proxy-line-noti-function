@@ -2,61 +2,89 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 )
 
 type Api struct {
-	Client *http.Client
+	client *http.Client
 	Url    string
 	Token  string
 }
 
-func (a *Api) Connect() *http.Client {
-	a.Client = &http.Client{}
-	return a.Client
+func (a *Api) connect() *http.Client {
+	a.client = &http.Client{}
+	return a.client
 }
 
-func (a *Api) SendNotification(message string) *http.Response {
+func (a *Api) SendNotification(r *http.Request) {
+	TrackingChannel = make(chan int)
+	MessageChannel = make(chan string)
+
+	go a.channelTracking()
+	go a.parseRequest(r)
+	a.forwardRequest()
+
+	close(TrackingChannel)
+	close(MessageChannel)
+}
+
+func (a *Api) forwardRequest() {
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
-	_ = writer.WriteField("message", message)
+	_ = writer.WriteField("message", <-MessageChannel)
 	err := writer.Close()
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 
-	client := a.Connect()
+	client := a.connect()
 	req, err := http.NewRequest("POST", a.Url, payload)
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 
 	req.Header.Add("Authorization", "Bearer "+a.Token)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := client.Do(req)
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
-	defer res.Body.Close()
 
-	return res
+	TrackingChannel <- res.StatusCode
+	defer res.Body.Close()
 }
 
-func WriteRequest(req *http.Request) []byte {
+func (a *Api) parseRequest(req *http.Request) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
-	return body
+	MessageChannel <- string(body)
 }
 
-func WriteReponse(res *http.Response) []byte {
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Println(err)
+func (a *Api) channelTracking() {
+	var status string
+	var statusCode int
+	statusCode = <-TrackingChannel
+
+	switch statusCode {
+	case 200:
+		status = fmt.Sprintf("OK %s", strconv.Itoa((statusCode)))
+	case 400:
+		status = fmt.Sprintf("Bad Request %s", strconv.Itoa((statusCode)))
+	case 401:
+		status = fmt.Sprintf("Authorized Error %s", strconv.Itoa((statusCode)))
+	case 429:
+		status = fmt.Sprintf("Too Many %s", strconv.Itoa((statusCode)))
+	case 500:
+		status = fmt.Sprintf("Channel Error %s", strconv.Itoa((statusCode)))
+	default:
+		status = fmt.Sprintf("Other Error %s", strconv.Itoa((statusCode)))
 	}
-	return body
+	log.Println(status)
 }

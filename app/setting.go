@@ -6,8 +6,10 @@ import (
 )
 
 var (
-	Setting Config
-	Noti    *Api
+	Setting         Config
+	Noti            *Api
+	TrackingChannel chan int
+	MessageChannel  chan string
 )
 
 const url = "https://notify-api.line.me/api/notify"
