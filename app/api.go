@@ -21,6 +21,8 @@ func (a *Api) connect() *http.Client {
 	return a.client
 }
 
+// SendNotification receive request from Trading View
+// and send it to Line Notify
 func (a *Api) SendNotification(r *http.Request) {
 	TrackingChannel = make(chan int)
 	MessageChannel = make(chan string)
@@ -33,6 +35,8 @@ func (a *Api) SendNotification(r *http.Request) {
 	close(MessageChannel)
 }
 
+// forwardRequest create message payload
+// and send it to specific url
 func (a *Api) forwardRequest() {
 	payload := &bytes.Buffer{}
 	writer := multipart.NewWriter(payload)
@@ -67,6 +71,7 @@ func (a *Api) parseRequest(req *http.Request) {
 	MessageChannel <- string(body)
 }
 
+// channelTracking tracks response metrices
 func (a *Api) channelTracking() {
 	var status string
 	var statusCode int
