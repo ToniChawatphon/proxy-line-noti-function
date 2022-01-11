@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 gcloud functions deploy ProxyLineNoti --runtime go116 \
 --trigger-http \
 --allow-unauthenticated \

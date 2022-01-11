@@ -7,7 +7,7 @@ import (
 )
 
 // ProxyLineNoti recieve an alert from Tradind View
-// and for the alert to line notify
+// and forward the alert to line notify
 func ProxyLineNoti(w http.ResponseWriter, r *http.Request) {
 	app.InitSetting()
 	app.Noti.SendNotification(r)
